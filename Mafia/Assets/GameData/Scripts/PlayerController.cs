@@ -11,18 +11,21 @@ public class PlayerController : MonoBehaviour
     public LayerMask groundMask; // the layer mask for the ground
     public Transform groundCheck; // the transform representing the position of the ground check
     public float turnSmoothTime = 0.1f; // the smoothing time for turning
-    public Transform cameraTransform; // the transform of the camera
+    public float camTurnSmoothTime = 0.05f; // the smoothing time for turning towards the camera
     public float camTiltAngle = 20f; // the angle to tilt the camera when crouching
 
     private Rigidbody rb; // the Rigidbody component of the player
     private float turnSmoothVelocity; // the velocity for smoothing turning
+    private float camTurnSmoothVelocity; // the velocity for smoothing turning towards the camera
     private bool isGrounded; // whether or not the player is grounded
     private bool isSprinting; // whether or not the player is sprinting
     private bool isCrouching; // whether or not the player is crouching
+    private Transform mainCamera; // the main camera
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>(); // get the Rigidbody component
+        mainCamera = Camera.main.transform; // get the main camera
     }
 
     private void FixedUpdate()
@@ -45,56 +48,44 @@ public class PlayerController : MonoBehaviour
         float vertical = Input.GetAxisRaw("Vertical");
         Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
 
-        // only rotate the player if moving
+        // rotate towards the camera
         if (direction.magnitude >= 0.1f)
         {
-            // calculate the target angle
-            float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cameraTransform.eulerAngles.y;
-
-            // smooth the turning
+            float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
             float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
-
-            // rotate the player
             transform.rotation = Quaternion.Euler(0f, angle, 0f);
+        }
+        else
+        {
+            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, mainCamera.eulerAngles.y, ref camTurnSmoothVelocity, camTurnSmoothTime);
+            transform.rotation = Quaternion.Euler(0f, angle, 0f);
+        }
 
-            // move the player
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
-
-            if (isSprinting)
-            {
-                rb.MovePosition(transform.position + moveDir.normalized * sprintSpeed * Time.deltaTime);
-            }
-            else if (isCrouching)
-            {
-                rb.MovePosition(transform.position + moveDir.normalized * crouchSpeed * Time.deltaTime);
-            }
-            else
-            {
-                rb.MovePosition(transform.position + moveDir.normalized * speed * Time.deltaTime);
-            }
+        // move the player
+        Vector3 moveDirection = Quaternion.Euler(0f, mainCamera.eulerAngles.y, 0f) * direction;
+        if (isSprinting)
+        {
+            rb.MovePosition(transform.position + moveDirection * sprintSpeed * Time.deltaTime);
+        }
+        else if (isCrouching)
+        {
+            rb.MovePosition(transform.position + moveDirection * crouchSpeed * Time.deltaTime);
+        }
+        else
+        {
+            rb.MovePosition(transform.position + moveDirection * speed * Time.deltaTime);
         }
 
         // handle sprinting and crouching
-        if (Input.GetKey(KeyCode.LeftShift))
+        if (Input.GetKeyDown(KeyCode.LeftShift))
         {
             isSprinting = true;
             isCrouching = false;
         }
-        if (Input.GetKeyUp(KeyCode.LeftShift))
-        {
-            isSprinting = false;
-            isCrouching = false;
-        }
-
-        if (Input.GetKey(KeyCode.LeftControl))
+        else if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             isSprinting = false;
             isCrouching = true;
-        }
-        if (Input.GetKey(KeyCode.LeftControl))
-        {
-            isSprinting = false;
-            isCrouching = false;
         }
     }
 }

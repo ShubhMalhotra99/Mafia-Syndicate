@@ -26,7 +26,7 @@ public class ThirdPersonPlayerController : MonoBehaviour
     private void FixedUpdate()
     { 
         float horizontal = Input.GetAxisRaw("Horizontal") * moveSpeed;
-        float vertical = Input.GetAxis("Vertical") * moveSpeed;
+        float vertical = Input.GetAxisRaw("Vertical") * moveSpeed;
         
         Vector3 cameraForward = Vector3.Scale(playerCamera.transform.forward, new Vector3(1, 0, 1)).normalized;
         Vector3 moveDirection = (vertical * cameraForward + horizontal * playerCamera.transform.right).normalized;
